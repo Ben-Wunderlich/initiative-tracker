@@ -7,7 +7,7 @@ exactly the same format, otherwise it will not work'''
 
 import random
 
-#ADDING REACTIONS THINGS
+
 def numeric_ensure(question):
     frustrated = False
     while True:
@@ -67,7 +67,7 @@ class Enemy(Creature):
     def use_reaction(self):
         if self.has_reaction:
             self.has_reaction = False
-            print(self.name, "has used it's reaction")
+            print(self.name, "\nhas used it's reaction\n")
         else:
             print(self.name, "does not have it's reaction to use")
 
@@ -91,16 +91,19 @@ class Hero(Creature):
         print("it is the player's job to keep track of their reactions")
 
 
+# returns name that is valid
 def make_name_full(question, grand_list):
     taken_names = []
     for combatant in grand_list:
         taken_names.append(combatant.name)
+        taken_names.extend([" ", ""])
     name = input(question)
-    while name == "":
+    while name in taken_names:
         name = input("Not a valid name, give another name")
     return name
 
 
+# shows the full initiative with one greater than their index
 def display_initiative(order):
     init_order = 1
     print()
@@ -118,19 +121,21 @@ def display_initiative(order):
     print()
 
 
-def bubble_sort(arr):
-    n = len(arr)
+# for sorting the list by intiative from high to low
+def bubble_sort(gr_list):
+    n = len(gr_list)
     for i in range(n):
         swapped = False
         for j in range(0, n - i - 1):
-            if arr[j].initiative < arr[j + 1].initiative:
-                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+            if gr_list[j].initiative < gr_list[j + 1].initiative:
+                gr_list[j], gr_list[j + 1] = gr_list[j + 1], gr_list[j]
                 swapped = True
         if not swapped:
             break
-    display_initiative(arr)
+    display_initiative(gr_list)
 
 
+# for manual creation of new creatures once running
 def new_creature(initiative):
     hero_villain = input("are they heroes 'h' or villains 'v'?")
     is_good = True
@@ -150,21 +155,15 @@ def new_creature(initiative):
     display_initiative(initiative)
 
 
-'''def create_creature(char_good, le_list):
-    if char_good:
-        return Hero("", char_good)
-    else:
-        return Enemy(le_list[0].initiative+1)'''
-
-
+# instantly removes a creature from the main list
 def kill_creature(the_order):
-    display_initiative(the_order)
-    who_died = numeric_ensure("which character died?") - 1
+    who_died = index_input("which character died?", the_order)
     print("\n", the_order[who_died].name, "has left the fray\n")
     del the_order[who_died]
     display_initiative(the_order)
 
 
+# allows you to damage an enemy, if their health <= 0 they are removed
 def damage_creature(the_list):
     see_enemies(the_list)
     who_damaged = numeric_ensure("which monster is being damaged") - 1
@@ -179,6 +178,7 @@ def damage_creature(the_list):
         return 0
 
 
+# shows you list of enemies with one greater than their index
 def see_enemies(grand_list):
     init_track = 1
     for creature in grand_list:
@@ -190,6 +190,7 @@ def see_enemies(grand_list):
             init_track += 1
 
 
+# initializes list with heroes and enemies
 def starting_part(grand_list, heroes):
     for hero in heroes:
         new_hero = Hero(hero, False, grand_list)
@@ -202,6 +203,7 @@ def starting_part(grand_list, heroes):
     bubble_sort(grand_list)
 
 
+# puts first value to the end
 def cycle_initiative(grand_list):
     temp = grand_list[0]
     list_temp = grand_list[1:]
@@ -209,6 +211,7 @@ def cycle_initiative(grand_list):
     return list_temp
 
 
+# puts last value to front, could be deleted if desired
 def backwards(grand_list):
     saved_val = grand_list[-1]
     del grand_list[-1]
@@ -216,12 +219,14 @@ def backwards(grand_list):
     return grand_list
 
 
+# changes name of any creature
 def change_name(grand_list):
     who_name_change = index_input("whose name needs to be corrected?", grand_list)
     grand_list[who_name_change].rename(grand_list)
     display_initiative(grand_list)
 
 
+# advances and keeps track of how many turns have progressed
 def round_counting(current_round, till_new_round, grand_list, many_slain, backwards):
     is_new_round = False
     if backwards:
@@ -237,36 +242,34 @@ def round_counting(current_round, till_new_round, grand_list, many_slain, backwa
             is_new_round = True
             current_round += 1
             till_new_round = len(grand_list)
-    print("gujdtnkf",till_new_round)
     print("Round:", current_round)
     display_initiative(grand_list)
     return current_round, till_new_round, is_new_round
 
 
+# shows all available commands
 def see_commands():
     print("""
-      'view' -- to see the current order 
-      return -- to cycle to the next person's turn
-      'quit' -- to exit out of the program
-        'c+' -- to add a new creature(at current place)
-        'c-' -- to remove a creature from the combat
-   'reorder' -- to sort all creatures
-' ' or 'dmg' -- to deal damage to an enemy
-    'rename' -- to change a creatures name
-'initiative' -- to change a creatures initiative
-      'back' -- to go back one turn
+      'view' -- see the current order 
+      return -- cycle to the next person's turn
+      'quit' -- exit out of the program
+        'c+' -- add a new creature(at current place)
+        'c-' -- remove a creature from the combat
+   'reorder' -- sort all creatures
+' ' or 'dmg' -- deal damage to an enemy
+    'rename' -- change a creatures name
+'initiative' -- change a creatures initiative
+      'back' -- go back one turn (still in alpha)
        'rxn' -- to use a monsters reaction
+    'select' -- manually select whose turn it is
 """)
 
 
+# returns index of creature displayed
 def index_input(question, grand_list):
     display_initiative(grand_list)
     answer = numeric_ensure(question) - 1
     return answer
-
-
-def reset_everything(the_heroes):
-    starting_part([], the_heroes)
 
 
 def give_reactions_back(grand_list):
@@ -276,9 +279,18 @@ def give_reactions_back(grand_list):
 
 
 def use_reaction(grand_list):
-    see_enemies(grand_list)
-    grand_list[numeric_ensure("which enemy uses their reaction?")-1]\
+    grand_list[index_input("which enemy uses their reaction?", grand_list)]\
         .use_reaction()
+
+
+def turn_selector(grand_list):
+    chosen_creature = index_input("which creatures turn do you want it to be?",
+                                  grand_list)
+    chosen_name = grand_list[chosen_creature].name
+    while grand_list[0].name != chosen_name:
+        grand_list = cycle_initiative(grand_list)
+    display_initiative(grand_list)
+    return grand_list
 
 
 def main(all_the_heroes):
@@ -288,7 +300,6 @@ def main(all_the_heroes):
     switches = len(grand_list)
     choice = ""
     slain_creatures = 0
-    is_new_round = False
 
     while choice != "quit":
         choice = input("enter a command, type 'help' if unsure ")
@@ -317,18 +328,19 @@ def main(all_the_heroes):
             change_name(grand_list)
         elif choice == "help":
             see_commands()
-        elif choice == "back":#replace this with skiping to go wherever
-            print("please note that this is still in construction and does not work")
+        elif choice == "back":
             grand_list = backwards(grand_list)
             round_count, switches, _ = round_counting\
                 (round_count, switches, grand_list, slain_creatures, True)
         elif choice == "initiative":
             grand_list[index_input("whose initiative should change?", grand_list)].reorder()
         elif choice == "reset":
-            reset_everything(all_the_heroes)
+            starting_part([], all_the_heroes)
             return
         elif choice == "rxn":
             use_reaction(grand_list)
+        elif choice == "select":
+            grand_list = turn_selector(grand_list)
         else:
             print("that command is not familiar to me, try again")
 
