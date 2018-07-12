@@ -6,29 +6,32 @@ you should input the heroes in your party, it must be in
 exactly the same format, otherwise it will not work'''
 
 import random
+from matrixing import string_sorter, main as full_query
 
+# MAKE IT SO THAT YOU CAN MANUALLY CHANGE HEALTH
 
+# note this is modified so if given "main" it will return main
+# otherwise it will always return a number from the user
 def numeric_ensure(question):
     frustrated = False
     while True:
         try:
             if frustrated:
-                response = int(input("I SAID, " + question))
+                response = input("I SAID, " + question)
+                if response == "main":
+                    return "main"
+                response = int(response)
                 break
             else:
-                response = int(input(question))
+                response = input(question)
+                if response == "main":
+                    return "main"
+                response = int(response)
                 break
         except ValueError:
             frustrated = True
             continue
     return response
-
-
-'''def total_enclosure(the_phrase):
-    length = len(the_phrase)
-    print("-"*(length + 4))
-    print("| {} |".format(the_phrase))
-    print("-"*(length + 4))'''
 
 
 class Creature:
@@ -41,16 +44,22 @@ class Creature:
 
 
 class Enemy(Creature):
-    def __init__(self, init_score, da_list):
+    def __init__(self, init_score, da_list, name=None, health=None):
         self.side = "enemy"
         self.has_reaction = True
-        self.name = make_name_full("name for enemy?", da_list)
+        if name == None:
+            self.name = make_name_full("name for enemy?", da_list)
+        else:
+            self.name = name
         if init_score == 0:
             self.initiative = random.randint(1, 20)
         else:
             self.initiative = init_score
-        self.health = numeric_ensure("how much health does {} have"
+        if health == None:
+            self.health = numeric_ensure("how much health does {} have"
                                      .format(self.name))
+        else:
+            self.health = health
 
     def __sub__(self, other):
         self.health -= other
@@ -71,6 +80,14 @@ class Enemy(Creature):
         else:
             print(self.name, "does not have it's reaction to use")
 
+    def adjust_health(self):
+        print("{} currently has {} health".format(self.name, self.health), end=" ")
+        new_health_amount = numeric_ensure("how much health does {} now have"
+                                           .format(self.name))
+        if new_health_amount == "main":
+            return "main"
+        self.health = new_health_amount
+
 
 class Hero(Creature):
     def __init__(self, name, is_new, big_list):
@@ -87,8 +104,13 @@ class Hero(Creature):
     def __sub__(self, other):
         print("that is not a valid command for this character")
 
-    def use_reaction(self):
+    @staticmethod
+    def use_reaction():
         print("it is the player's job to keep track of their reactions")
+
+    @staticmethod
+    def adjust_health():
+        print("it is the players job to keep track of their reactions")
 
 
 # returns name that is valid
@@ -104,9 +126,11 @@ def make_name_full(question, grand_list):
 
 
 # shows the full initiative with one greater than their index
-def display_initiative(order):
+def display_initiative(order, curr_round=None):
     init_order = 1
     print()
+    if curr_round is not None:
+        show_round(curr_round)
     first_time = True
     for creature in order:
         if creature.side == "hero":
@@ -137,42 +161,63 @@ def bubble_sort(gr_list):
 
 # for manual creation of new creatures once running
 def new_creature(initiative):
-    hero_villain = input("are they heroes 'h' or villains 'v'?")
     is_good = True
-    while not hero_villain == "h" and not hero_villain == "v":
-        hero_villain = input("I SAID is it a hero 'h' or villain 'v'?")
-    if hero_villain == "v":
-        number_of_creatures = numeric_ensure("now many villains are joining the fight")
-        is_good = False
-    if hero_villain == "h":
-        number_of_creatures = numeric_ensure("now many heroes are joining the fight")
+    while True:
+        hero_villain = input("are they heroes 'h' or villains 'v' or group 'vg?")
+        if hero_villain == "h":
+            number_of_creatures = numeric_ensure("now many heroes are joining the fight?")
+            break
+        elif hero_villain == "v":
+            is_good = False
+            number_of_creatures = numeric_ensure("now many villains are joining the fight?")
+            break
+        elif hero_villain == "vg":
+            number_of_creatures = numeric_ensure("now many minions are joining the fight?")
+            is_good = False
+            break
+        elif hero_villain == "main":
+            return "main"
+        else:
+            print("that does not work")
 
     for _ in range(number_of_creatures):
         if is_good:
-            initiative.insert(0, Hero("", is_good, initiative))
-        else:
-            initiative.insert(1, Enemy(initiative[0].initiative+1, initiative))
+            initiative.insert(0, Hero("", True, initiative))
+        elif hero_villain == "v":
+            initiative.insert(0, Enemy(initiative[0].initiative+1, initiative))
+        else:  # this will be if hero_villain == "vg
+            base_name = make_name_full("what is the base name", initiative)
+            for i in range(1, number_of_creatures + 1):
+                current_name = base_name + str(i)
+                initiative.insert(0, Enemy(initiative[0].initiative + 1, initiative, current_name))
     display_initiative(initiative)
 
 
 # instantly removes a creature from the main list
-def kill_creature(the_order):
+def kill_creature(the_order, curr_round):
     who_died = index_input("which character died?", the_order)
+    if who_died == "main":
+        return
     print("\n", the_order[who_died].name, "has left the fray\n")
     del the_order[who_died]
-    display_initiative(the_order)
+    display_initiative(the_order, curr_round)
 
 
 # allows you to damage an enemy, if their health <= 0 they are removed
-def damage_creature(the_list):
+def damage_creature(the_list, curr_round):
     see_enemies(the_list)
-    who_damaged = numeric_ensure("which monster is being damaged") - 1
+    print()
+    who_damaged = index_input("which monster is being damaged", the_list, False)
+    if who_damaged == "main":
+        return "main"
     damage_amount = numeric_ensure("how much damage is being inflicted to {}?"
                                    .format(the_list[who_damaged].name))
+    if damage_amount == "main":
+        return "main"
     is_dead = the_list[who_damaged] - damage_amount
     if is_dead:
         del the_list[who_damaged]
-        display_initiative(the_list)
+        display_initiative(the_list, curr_round)
         return 1
     else:
         return 0
@@ -196,9 +241,32 @@ def starting_part(grand_list, heroes):
         new_hero = Hero(hero, False, grand_list)
         grand_list.append(new_hero)
 
-    for i in range(numeric_ensure("how many enemies?")):
-        new_orc = Enemy(0, grand_list)
-        grand_list.append(new_orc)
+    enemy_amount = numeric_ensure("how many enemies?")
+    if enemy_amount == "main":
+        return "main"
+    naming_count = 1
+    is_a_group = input("is there a group of minions? y/n") == "y"
+    if is_a_group:
+        many_in_group = numeric_ensure("out of the {}, how many are minions?"
+                                       .format(enemy_amount))
+        base_name = make_name_full\
+            ("what is the base name for the minions", grand_list)
+        health_amount = numeric_ensure("how much health do the {}'s have?"
+                                       .format(base_name))
+        if many_in_group == "main" or base_name == "main"\
+                or health_amount == "main":
+            return "main"
+
+    for _ in range(enemy_amount):
+        if is_a_group and many_in_group > 0:
+            many_in_group -= 1
+            current_name = base_name + str(naming_count)
+            naming_count += 1
+            new_enemy = Enemy(0, grand_list, current_name, health_amount)
+            grand_list.append(new_enemy)
+        else:
+            new_enemy = Enemy(0, grand_list) # 0 indicates it should be randomized
+            grand_list.append(new_enemy)
     print("Round: 1")
     bubble_sort(grand_list)
 
@@ -222,6 +290,8 @@ def backwards(grand_list):
 # changes name of any creature
 def change_name(grand_list):
     who_name_change = index_input("whose name needs to be corrected?", grand_list)
+    if who_name_change == "main":
+        return
     grand_list[who_name_change].rename(grand_list)
     display_initiative(grand_list)
 
@@ -242,8 +312,7 @@ def round_counting(current_round, till_new_round, grand_list, many_slain, backwa
             is_new_round = True
             current_round += 1
             till_new_round = len(grand_list)
-    print("Round:", current_round)
-    display_initiative(grand_list)
+    display_initiative(grand_list, current_round)
     return current_round, till_new_round, is_new_round
 
 
@@ -251,7 +320,7 @@ def round_counting(current_round, till_new_round, grand_list, many_slain, backwa
 def see_commands():
     print("""
       'view' -- see the current order 
-      return -- cycle to the next person's turn
+      return -- cycle to the next creature's turn
       'quit' -- exit out of the program
         'c+' -- add a new creature(at current place)
         'c-' -- remove a creature from the combat
@@ -260,37 +329,106 @@ def see_commands():
     'rename' -- change a creatures name
 'initiative' -- change a creatures initiative
       'back' -- go back one turn (still in alpha)
-       'rxn' -- to use a monsters reaction
+       'rxn' -- use a monsters reaction
     'select' -- manually select whose turn it is
+      'roll' -- roll dice of any type and amount
+'roll guide' -- guide to using the dice rolling feature
+      'main' -- go back to main menu/exit current process
+    'health' -- manually set a creatures health
 """)
 
 
+# used only for dealing damage to creatures
+def make_numeric(le_string, question):
+    try:
+        le_string = int(le_string)
+        return le_string
+    except ValueError:
+        pass
+    numeric_ensure(question)
+
+
 # returns index of creature displayed
-def index_input(question, grand_list):
-    display_initiative(grand_list)
-    answer = numeric_ensure(question) - 1
+def index_input(question, grand_list, show_init=True):
+    if show_init:
+        display_initiative(grand_list)
+    answer = -1
+    # -1 is an arbitrary number
+    #  that will make the loop run at least once
+    while answer > len(grand_list) or answer < 1:
+        answer = input(question)
+        if answer == "main":
+            return "main"
+        else:
+            answer = make_numeric(answer, question)
+    answer -= 1
     return answer
 
 
+# makes has_reactions true for each creature
 def give_reactions_back(grand_list):
     for creature in grand_list:
         if creature.side == "enemy":
             creature.has_reaction = True
 
 
+# expends the reaction for one monster
 def use_reaction(grand_list):
-    grand_list[index_input("which enemy uses their reaction?", grand_list)]\
-        .use_reaction()
+    inp = index_input("which enemy uses their reaction?", grand_list)
+    if inp == "main":
+        return
+    grand_list[inp].use_reaction()
 
 
+# jumps to anyone's turn manually
 def turn_selector(grand_list):
     chosen_creature = index_input("which creatures turn do you want it to be?",
                                   grand_list)
+    if chosen_creature == "main":
+        return
     chosen_name = grand_list[chosen_creature].name
     while grand_list[0].name != chosen_name:
         grand_list = cycle_initiative(grand_list)
     display_initiative(grand_list)
     return grand_list
+
+
+# prints what round it currently is
+def show_round(curr_round):
+    print("Round:", curr_round)
+
+
+# shows how to use the dice roller
+def dice_guide():
+    print('''the form for dice rolling is as follows, 
+     the number before the "d" is the number of dice and the number
+     after the "d" is the type of die to be rolled.
+     
+     so 4d6 is four six sided dice, you can add or subtract any number
+     of these as well as single numbers, so 3d6 - 2d5 + 6 - 9d28 is
+     a possible roll''')
+
+
+# rolls the dice
+def dice_rolling():
+    total_statement = "\nYour roll total is: "
+    query = "select which dice you want to roll(1d4 form), 'main' to go back"
+    die_roll = None
+    while die_roll != "main":
+        die_roll = input(query)
+        if die_roll == "main":
+            continue
+        elif die_roll == "full":
+            print()
+            full_query()
+            break
+        print(total_statement, string_sorter(die_roll, False), "\n")
+
+
+def change_health(grand_list):
+    see_enemies(grand_list)
+    which_enemy = index_input("which enemy whoe health is changing?", grand_list)
+    grand_list[which_enemy].adjust_health()
 
 
 def main(all_the_heroes):
@@ -314,16 +452,19 @@ def main(all_the_heroes):
         elif choice == "quit":
             break
         elif choice == "view":
-            display_initiative(grand_list)
+            display_initiative(grand_list, round_count)
         elif choice == "c+":
             new_creature(grand_list)
         elif choice == "reorder":
             bubble_sort(grand_list)
         elif choice == "c-":
-            kill_creature(grand_list)
+            kill_creature(grand_list, round_count)
             slain_creatures += 1
         elif choice == " " or choice == "dmg":
-            slain_creatures += damage_creature(grand_list)
+            fatalaties = damage_creature(grand_list, round_count)
+            if fatalaties == "main":
+                continue
+            slain_creatures += fatalaties
         elif choice == "rename":
             change_name(grand_list)
         elif choice == "help":
@@ -333,7 +474,10 @@ def main(all_the_heroes):
             round_count, switches, _ = round_counting\
                 (round_count, switches, grand_list, slain_creatures, True)
         elif choice == "initiative":
-            grand_list[index_input("whose initiative should change?", grand_list)].reorder()
+            to_be_changed = index_input("whose initiative should change?", grand_list)
+            if to_be_changed == "main":
+                continue
+            grand_list[to_be_changed].reorder()
         elif choice == "reset":
             starting_part([], all_the_heroes)
             return
@@ -341,6 +485,17 @@ def main(all_the_heroes):
             use_reaction(grand_list)
         elif choice == "select":
             grand_list = turn_selector(grand_list)
+        elif choice == "roll":
+            dice_rolling()
+            display_initiative(grand_list, round_count)
+        elif choice == "roll guide":
+            dice_guide()
+        elif choice == "health":
+            change_health(grand_list)
+        elif choice == "main":
+            print("you are currently in the main menu")
+            display_initiative(grand_list, round_count)
+            continue
         else:
             print("that command is not familiar to me, try again")
 
