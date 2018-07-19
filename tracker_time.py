@@ -1,17 +1,18 @@
-list_of_heroes = ["hero1", "hero2"]
-
-#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-'''in order to make things faster, this is where 
-you should input the heroes in your party, it must be in 
-exactly the same format, otherwise it will not work'''
-
 import random
 from matrixing import string_sorter, main as full_query
-
-# MAKE IT SO THAT YOU CAN MANUALLY CHANGE HEALTH
+import player_name_changer as default_changer
 
 # note this is modified so if given "main" it will return main
 # otherwise it will always return a number from the user
+
+
+def make_hero_file():
+    file2 = open("hero names.txt", "w")
+    file2.write("hero1, hero2")
+    file2.close()
+    print("file for names of heroes created")
+
+
 def numeric_ensure(question):
     frustrated = False
     while True:
@@ -47,7 +48,7 @@ class Enemy(Creature):
     def __init__(self, init_score, da_list, name=None, health=None):
         self.side = "enemy"
         self.has_reaction = True
-        if name == None:
+        if name is None:
             self.name = make_name_full("name for enemy?", da_list)
         else:
             self.name = name
@@ -55,7 +56,7 @@ class Enemy(Creature):
             self.initiative = random.randint(1, 20)
         else:
             self.initiative = init_score
-        if health == None:
+        if health is None:
             self.health = numeric_ensure("how much health does {} have"
                                      .format(self.name))
         else:
@@ -110,7 +111,7 @@ class Hero(Creature):
 
     @staticmethod
     def adjust_health():
-        print("it is the players job to keep track of their reactions")
+        print("it is the players job to keep track of their health")
 
 
 # returns name that is valid
@@ -169,27 +170,32 @@ def new_creature(initiative):
             break
         elif hero_villain == "v":
             is_good = False
-            number_of_creatures = numeric_ensure("now many villains are joining the fight?")
+            number_of_creatures = numeric_ensure("how many villains are joining the fight?")
             break
         elif hero_villain == "vg":
-            number_of_creatures = numeric_ensure("now many minions are joining the fight?")
+            number_of_creatures = numeric_ensure("how many minions are joining the fight?")
+            base_name = make_name_full("what is the base name", initiative)
+            amount_of_health = numeric_ensure("how much health do {}'s have"
+                                              .format(base_name))
             is_good = False
             break
-        elif hero_villain == "main":
-            return "main"
         else:
             print("that does not work")
 
+    if hero_villain == "main" or number_of_creatures == "main":
+        return "main"
     for _ in range(number_of_creatures):
         if is_good:
             initiative.insert(0, Hero("", True, initiative))
         elif hero_villain == "v":
             initiative.insert(0, Enemy(initiative[0].initiative+1, initiative))
         else:  # this will be if hero_villain == "vg
-            base_name = make_name_full("what is the base name", initiative)
+            if (base_name or amount_of_health) == "main":
+                return
             for i in range(1, number_of_creatures + 1):
                 current_name = base_name + str(i)
-                initiative.insert(0, Enemy(initiative[0].initiative + 1, initiative, current_name))
+                initiative.insert(0, Enemy
+                (initiative[0].initiative + 1, initiative, current_name, amount_of_health))
     display_initiative(initiative)
 
 
@@ -200,6 +206,7 @@ def kill_creature(the_order, curr_round):
         return
     print("\n", the_order[who_died].name, "has left the fray\n")
     del the_order[who_died]
+
     display_initiative(the_order, curr_round)
 
 
@@ -242,10 +249,20 @@ def starting_part(grand_list, heroes):
         grand_list.append(new_hero)
 
     enemy_amount = numeric_ensure("how many enemies?")
+    if enemy_amount <= 0:
+        print("Round: 1")
+        bubble_sort(grand_list)
+        return
+
     if enemy_amount == "main":
         return "main"
+
     naming_count = 1
-    is_a_group = input("is there a group of minions? y/n") == "y"
+    if enemy_amount != 1:
+        is_a_group = input("is there a group of minions? y/n") == "y"
+    else:
+        is_a_group = False
+
     if is_a_group:
         many_in_group = numeric_ensure("out of the {}, how many are minions?"
                                        .format(enemy_amount))
@@ -334,7 +351,8 @@ def see_commands():
       'roll' -- roll dice of any type and amount
 'roll guide' -- guide to using the dice rolling feature
       'main' -- go back to main menu/exit current process
-    'health' -- manually set a creatures health
+        'hp' -- manually set a creatures health
+   'default' -- change default hero names
 """)
 
 
@@ -427,8 +445,14 @@ def dice_rolling():
 
 def change_health(grand_list):
     see_enemies(grand_list)
-    which_enemy = index_input("which enemy whoe health is changing?", grand_list)
+    which_enemy = index_input("which enemy's health is changing?",
+                              grand_list, False)
+    if which_enemy == "main":
+        return "main"
     grand_list[which_enemy].adjust_health()
+    print("{} now has {} health".
+          format(grand_list[which_enemy].name,
+                 grand_list[which_enemy].health))
 
 
 def main(all_the_heroes):
@@ -461,10 +485,10 @@ def main(all_the_heroes):
             kill_creature(grand_list, round_count)
             slain_creatures += 1
         elif choice == " " or choice == "dmg":
-            fatalaties = damage_creature(grand_list, round_count)
-            if fatalaties == "main":
+            fatalities = damage_creature(grand_list, round_count)
+            if fatalities == "main":
                 continue
-            slain_creatures += fatalaties
+            slain_creatures += fatalities
         elif choice == "rename":
             change_name(grand_list)
         elif choice == "help":
@@ -490,14 +514,32 @@ def main(all_the_heroes):
             display_initiative(grand_list, round_count)
         elif choice == "roll guide":
             dice_guide()
-        elif choice == "health":
+        elif choice == "hp":
             change_health(grand_list)
         elif choice == "main":
             print("you are currently in the main menu")
             display_initiative(grand_list, round_count)
             continue
+        elif choice == "default":
+            default_changer.main()
         else:
             print("that command is not familiar to me, try again")
 
+
+def define_heroes():
+    try:
+        file = open("hero names.txt", "r")
+    except IOError as e:
+        print(e)
+        print("file: hero names.txt not found, creating file")
+        make_hero_file()
+        file = open("hero names.txt", "r")
+    list_of_heroes1 = file.read()
+    file.close()
+    list_of_heroes1 = list(list_of_heroes1.split(", "))
+    return list_of_heroes1
+
+
+list_of_heroes = define_heroes()
 
 main(list_of_heroes)
