@@ -95,7 +95,7 @@ def next_choice(hero_names):
             help_commands()
         elif the_input == "rename":
             rename(hero_names)
-        elif the_input == "quit":
+        elif the_input == "quit" or the_input == "main":
             if input(quit_question) == "y":
                 return
         elif the_input == "+":
