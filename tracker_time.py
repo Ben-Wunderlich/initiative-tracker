@@ -19,14 +19,10 @@ def numeric_ensure(question):
         try:
             if frustrated:
                 response = input("I SAID, " + question)
-                if response == "main":
-                    return "main"
                 response = int(response)
                 break
             else:
                 response = input(question)
-                if response == "main":
-                    return "main"
                 response = int(response)
                 break
         except ValueError:
@@ -79,14 +75,12 @@ class Enemy(Creature):
             self.has_reaction = False
             print(self.name, "\nhas used it's reaction\n")
         else:
-            print(self.name, "does not have it's reaction to use")
+            print("\n", self.name, "does not have it's reaction to use\n")
 
     def adjust_health(self):
         print("{} currently has {} health".format(self.name, self.health), end=" ")
         new_health_amount = numeric_ensure("how much health does {} now have"
                                            .format(self.name))
-        if new_health_amount == "main":
-            return "main"
         self.health = new_health_amount
 
 
@@ -182,20 +176,18 @@ def new_creature(initiative):
         else:
             print("that does not work")
 
-    if hero_villain == "main" or number_of_creatures == "main":
-        return "main"
+    i = 1
     for _ in range(number_of_creatures):
         if is_good:
             initiative.insert(0, Hero("", True, initiative))
         elif hero_villain == "v":
             initiative.insert(0, Enemy(initiative[0].initiative+1, initiative))
         else:  # this will be if hero_villain == "vg
-            if (base_name or amount_of_health) == "main":
-                return
-            for i in range(1, number_of_creatures + 1):
-                current_name = base_name + str(i)
-                initiative.insert(0, Enemy
-                (initiative[0].initiative + 1, initiative, current_name, amount_of_health))
+            current_name = base_name + str(i)
+            initiative.insert(0, Enemy
+    (initiative[0].initiative + 1, initiative, current_name, amount_of_health))
+
+            i += 1
     display_initiative(initiative)
 
 
@@ -203,7 +195,7 @@ def new_creature(initiative):
 def kill_creature(the_order, curr_round):
     who_died = index_input("which character died?", the_order)
     if who_died == "main":
-        return
+        return "main"
     print("\n", the_order[who_died].name, "has left the fray\n")
     del the_order[who_died]
 
@@ -214,10 +206,10 @@ def kill_creature(the_order, curr_round):
 def damage_creature(the_list, curr_round):
     see_enemies(the_list)
     print()
-    who_damaged = index_input("which monster is being damaged", the_list, False)
+    who_damaged = index_input("which monster is being damaged? ", the_list, False)
     if who_damaged == "main":
         return "main"
-    damage_amount = numeric_ensure("how much damage is being inflicted to {}?"
+    damage_amount = numeric_ensure("how much damage is being inflicted to {}? "
                                    .format(the_list[who_damaged].name))
     if damage_amount == "main":
         return "main"
@@ -254,9 +246,6 @@ def starting_part(grand_list, heroes):
         bubble_sort(grand_list)
         return
 
-    if enemy_amount == "main":
-        return "main"
-
     naming_count = 1
     if enemy_amount != 1:
         is_a_group = input("is there a group of minions? y/n") == "y"
@@ -270,9 +259,6 @@ def starting_part(grand_list, heroes):
             ("what is the base name for the minions", grand_list)
         health_amount = numeric_ensure("how much health do the {}'s have?"
                                        .format(base_name))
-        if many_in_group == "main" or base_name == "main"\
-                or health_amount == "main":
-            return "main"
 
     for _ in range(enemy_amount):
         if is_a_group and many_in_group > 0:
@@ -296,39 +282,25 @@ def cycle_initiative(grand_list):
     return list_temp
 
 
-# puts last value to front, could be deleted if desired
-def backwards(grand_list):
-    saved_val = grand_list[-1]
-    del grand_list[-1]
-    grand_list.insert(0, saved_val)
-    return grand_list
-
-
 # changes name of any creature
 def change_name(grand_list):
     who_name_change = index_input("whose name needs to be corrected?", grand_list)
     if who_name_change == "main":
-        return
+        return "main"
     grand_list[who_name_change].rename(grand_list)
     display_initiative(grand_list)
 
 
 # advances and keeps track of how many turns have progressed
-def round_counting(current_round, till_new_round, grand_list, many_slain, backwards):
+def round_counting(current_round, till_new_round, grand_list, many_slain):
     is_new_round = False
-    if backwards:
-        till_new_round += 1
-        till_new_round += many_slain
-        if till_new_round >= len(grand_list):
-            current_round -= 1
-            till_new_round = 0
-    else:
-        till_new_round -= 1
-        till_new_round -= many_slain
-        if till_new_round <= 0:
-            is_new_round = True
-            current_round += 1
-            till_new_round = len(grand_list)
+
+    till_new_round -= 1
+    till_new_round -= many_slain
+    if till_new_round <= 0:
+        is_new_round = True
+        current_round += 1
+        till_new_round = len(grand_list)
     display_initiative(grand_list, current_round)
     return current_round, till_new_round, is_new_round
 
@@ -341,11 +313,10 @@ def see_commands():
       'quit' -- exit out of the program
         'c+' -- add a new creature(at current place)
         'c-' -- remove a creature from the combat
-   'reorder' -- sort all creatures
+   'reorder' -- sort all creatures by initiative
 ' ' or 'dmg' -- deal damage to an enemy
     'rename' -- change a creatures name
 'initiative' -- change a creatures initiative
-      'back' -- go back one turn (still in alpha)
        'rxn' -- use a monsters reaction
     'select' -- manually select whose turn it is
       'roll' -- roll dice of any type and amount
@@ -392,9 +363,8 @@ def give_reactions_back(grand_list):
 
 # expends the reaction for one monster
 def use_reaction(grand_list):
-    inp = index_input("which enemy uses their reaction?", grand_list)
-    if inp == "main":
-        return
+    see_enemies(grand_list)
+    inp = index_input("which enemy uses their reaction?", grand_list, False)
     grand_list[inp].use_reaction()
 
 
@@ -402,8 +372,6 @@ def use_reaction(grand_list):
 def turn_selector(grand_list):
     chosen_creature = index_input("which creatures turn do you want it to be?",
                                   grand_list)
-    if chosen_creature == "main":
-        return
     chosen_name = grand_list[chosen_creature].name
     while grand_list[0].name != chosen_name:
         grand_list = cycle_initiative(grand_list)
@@ -447,8 +415,6 @@ def change_health(grand_list):
     see_enemies(grand_list)
     which_enemy = index_input("which enemy's health is changing?",
                               grand_list, False)
-    if which_enemy == "main":
-        return "main"
     grand_list[which_enemy].adjust_health()
     print("{} now has {} health".
           format(grand_list[which_enemy].name,
@@ -468,7 +434,7 @@ def main(all_the_heroes):
         if choice == "":
             grand_list = cycle_initiative(grand_list)
             round_count, switches, is_new_round = round_counting\
-                (round_count, switches, grand_list, slain_creatures, False)
+                (round_count, switches, grand_list, slain_creatures)
             slain_creatures = 0
             if is_new_round:
                 give_reactions_back(grand_list)
@@ -493,10 +459,6 @@ def main(all_the_heroes):
             change_name(grand_list)
         elif choice == "help":
             see_commands()
-        elif choice == "back":
-            grand_list = backwards(grand_list)
-            round_count, switches, _ = round_counting\
-                (round_count, switches, grand_list, slain_creatures, True)
         elif choice == "initiative":
             to_be_changed = index_input("whose initiative should change?", grand_list)
             if to_be_changed == "main":
