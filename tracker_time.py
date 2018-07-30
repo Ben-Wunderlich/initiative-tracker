@@ -2,6 +2,7 @@ import random
 from matrixing import string_sorter, main as full_query
 import player_name_changer as default_changer
 
+
 # note this is modified so if given "main" it will return main
 # otherwise it will always return a number from the user
 
@@ -53,10 +54,14 @@ class Enemy(Creature):
         else:
             self.initiative = init_score
         if health is None:
-            self.health = numeric_ensure("how much health does {} have"
+            self.health = numeric_ensure("how much health does {} have? "
                                      .format(self.name))
         else:
             self.health = health
+
+    def __str__(self):
+        return "- {} with initiative of {} and {} health"\
+            .format(self.name, self.initiative, self.health)
 
     def __sub__(self, other):
         self.health -= other
@@ -73,7 +78,7 @@ class Enemy(Creature):
     def use_reaction(self):
         if self.has_reaction:
             self.has_reaction = False
-            print(self.name, "\nhas used it's reaction\n")
+            print(self.name, "has used it's reaction\n")
         else:
             print("\n", self.name, "does not have it's reaction to use\n")
 
@@ -98,6 +103,10 @@ class Hero(Creature):
 
     def __sub__(self, other):
         print("that is not a valid command for this character")
+
+    def __str__(self):
+        result = "- {} with initiative of {}".format(self.name, self.initiative)
+        return result
 
     @staticmethod
     def use_reaction():
@@ -128,11 +137,7 @@ def display_initiative(order, curr_round=None):
         show_round(curr_round)
     first_time = True
     for creature in order:
-        if creature.side == "hero":
-            print("{2}- {0} with initiative of {1}".format(creature.name, creature.initiative, init_order))
-        else:
-            print("{3}- {0} with initiative of {1} and {2} health"
-                  .format(creature.name, creature.initiative, creature.health, init_order))
+        print(init_order, creature, sep="")
         if first_time:
             print("<>" * 18)
             first_time = False
@@ -209,10 +214,17 @@ def damage_creature(the_list, curr_round):
     who_damaged = index_input("which monster is being damaged? ", the_list, False)
     if who_damaged == "main":
         return "main"
+    while the_list[who_damaged].side == "hero":
+        print("it is up to a player to track their own health, pick again")
+        who_damaged = index_input("which monster is being damaged? ", the_list, False)
+        if who_damaged == "main":
+            return "main"
+
+    if who_damaged == "main":
+        return "main"
     damage_amount = numeric_ensure("how much damage is being inflicted to {}? "
                                    .format(the_list[who_damaged].name))
-    if damage_amount == "main":
-        return "main"
+
     is_dead = the_list[who_damaged] - damage_amount
     if is_dead:
         del the_list[who_damaged]
@@ -226,12 +238,9 @@ def damage_creature(the_list, curr_round):
 def see_enemies(grand_list):
     init_track = 1
     for creature in grand_list:
-        if creature.side == "hero":
-            init_track += 1
-        else:
-            print("{}- {} with {} health"
-                  .format(init_track, creature.name, creature.health))
-            init_track += 1
+        if creature.side == "enemy":
+            print(init_track, creature, sep="")
+        init_track += 1
 
 
 # initializes list with heroes and enemies
