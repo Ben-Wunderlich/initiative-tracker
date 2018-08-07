@@ -1,4 +1,4 @@
-#from num_ensure import numeric_ensure
+#from num_ensure import integer_ensure
 """
 Takes a question and asks it until somthing that can be
 converted to a integer is given by the user,
