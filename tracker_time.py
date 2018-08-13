@@ -20,16 +20,17 @@ class Creature:
         self.name = make_name_full("What is {}'s new name?".format(self.name), grand_list)
 
     def reorder(self):
-        self.initiative = integer_ensure("what is {}'s new initiative?"
-                                         .format(self.name))
+        self.initiative = integer_ensure("what is {}'s new initiative? (currently {}) "
+                                         .format(self.name, self.initiative))
+        print("\n{}'s initiative is now {}\n".format(self.name, self.initiative))
 
 
 class Enemy(Creature):
-    def __init__(self, init_score, da_list, name=None, health=None):
+    def __init__(self, init_score, grand_list, name=None, health=None):
         self.side = "enemy"
         self.has_reaction = True
         if name is None:
-            self.name = make_name_full("name for enemy?", da_list)
+            self.name = make_name_full("name for enemy?", grand_list)
         else:
             self.name = name
         if init_score == 0:
@@ -37,7 +38,7 @@ class Enemy(Creature):
         else:
             self.initiative = init_score
         if health is None:
-            self.health = formula_ensure("how much health does {} have? "
+            self.health = formula_ensure("how much health does {} have?"
                                      .format(self.name))
         else:
             self.health = health
@@ -73,10 +74,10 @@ class Enemy(Creature):
 
 
 class Hero(Creature):
-    def __init__(self, name, is_new, big_list):
+    def __init__(self, name, is_new, grand_list):
         self.side = "hero"
         if is_new:
-            self.name = make_name_full("what is the name of this hero?", big_list)
+            self.name = make_name_full("what is the name of this hero?", grand_list)
         else:
             self.name = name
         if is_new:
@@ -113,13 +114,13 @@ def make_name_full(question, grand_list):
 
 
 # shows the full initiative with one greater than their index
-def display_initiative(order, curr_round=None):
+def display_initiative(grand_list, curr_round=None):
     init_order = 1
     print()
     if curr_round is not None:
         show_round(curr_round)
     first_time = True
-    for creature in order:
+    for creature in grand_list:
         print(init_order, creature, sep="")
         if first_time:
             print("<>" * 18)
@@ -129,21 +130,21 @@ def display_initiative(order, curr_round=None):
 
 
 # for sorting the list by intiative from high to low
-def bubble_sort(gr_list):
-    n = len(gr_list)
+def bubble_sort(gr_li):
+    n = len(gr_li)
     for i in range(n):
         swapped = False
         for j in range(0, n - i - 1):
-            if gr_list[j].initiative < gr_list[j + 1].initiative:
-                gr_list[j], gr_list[j + 1] = gr_list[j + 1], gr_list[j]
+            if gr_li[j].initiative < gr_li[j + 1].initiative:
+                gr_li[j], gr_li[j + 1] = gr_li[j + 1], gr_li[j]
                 swapped = True
         if not swapped:
             break
-    display_initiative(gr_list)
+    display_initiative(gr_li)
 
 
 # for manual creation of new creatures once running
-def new_creature(initiative):
+def new_creature(grand_list):
     is_good = True
     while True:
         hero_villain = input("are they heroes 'h' or villains 'v' or group 'vg?")
@@ -156,7 +157,7 @@ def new_creature(initiative):
             break
         elif hero_villain == "vg":
             number_of_creatures = integer_ensure("how many minions are joining the fight?")
-            base_name = make_name_full("what is the base name", initiative)
+            base_name = make_name_full("what is the base name", grand_list)
             amount_of_health = formula_ensure("how much health do {}'s have"
                                               .format(base_name))
             is_good = False
@@ -167,16 +168,16 @@ def new_creature(initiative):
     i = 1
     for _ in range(number_of_creatures):
         if is_good:
-            initiative.insert(0, Hero("", True, initiative))
+            grand_list.insert(0, Hero("", True, grand_list))
         elif hero_villain == "v":
-            initiative.insert(0, Enemy(initiative[0].initiative+1, initiative))
-        else:  # this will be if hero_villain == "vg
+            grand_list.insert(0, Enemy(grand_list[0].initiative + 1, grand_list))
+        else:  # this is if hero_villain == "vg
             current_name = base_name + str(i)
-            initiative.insert(0, Enemy
-    (initiative[0].initiative + 1, initiative, current_name, amount_of_health))
+            grand_list.insert(0, Enemy
+    (grand_list[0].initiative + 1, grand_list, current_name, amount_of_health))
 
             i += 1
-    display_initiative(initiative)
+    display_initiative(grand_list)
 
 
 # instantly removes a creature from the main list
@@ -317,6 +318,7 @@ def see_commands():
         'hp' -- manually set a creatures health
    'default' -- change default hero names
       'quit' -- exit out of the program
+     'reset' -- resets the program
 """)
 
 
@@ -406,7 +408,7 @@ def change_health(grand_list):
 
 def main(all_the_heroes):
     grand_list = []
-    round_count = 1
+    curr_round = 1
     starting_part(grand_list, all_the_heroes)
     switches = len(grand_list)
     choice = ""
@@ -416,8 +418,8 @@ def main(all_the_heroes):
         choice = input("enter a command, type 'help' if unsure ")
         if choice == "":
             grand_list = cycle_initiative(grand_list)
-            round_count, switches, is_new_round = round_counting\
-                (round_count, switches, grand_list, slain_creatures)
+            curr_round, switches, is_new_round = round_counting\
+                (curr_round, switches, grand_list, slain_creatures)
             slain_creatures = 0
             if is_new_round:
                 give_reactions_back(grand_list)
@@ -425,16 +427,16 @@ def main(all_the_heroes):
         elif choice == "quit":
             break
         elif choice == "view":
-            display_initiative(grand_list, round_count)
+            display_initiative(grand_list, curr_round)
         elif choice == "c+":
             new_creature(grand_list)
         elif choice == "ord":
             bubble_sort(grand_list)
         elif choice == "c-":
-            kill_creature(grand_list, round_count)
+            kill_creature(grand_list, curr_round)
             slain_creatures += 1
         elif choice == " " or choice == "dmg":
-            fatalities = damage_creature(grand_list, round_count)
+            fatalities = damage_creature(grand_list, curr_round)
             if fatalities == "main":
                 continue
             slain_creatures += fatalities
@@ -447,8 +449,9 @@ def main(all_the_heroes):
             if to_be_changed == "main":
                 continue
             grand_list[to_be_changed].reorder()
+            display_initiative(grand_list, curr_round)
         elif choice == "reset":
-            starting_part([], all_the_heroes)
+            main(list_of_heroes)
             return
         elif choice == "rxn":
             use_reaction(grand_list)
@@ -456,14 +459,14 @@ def main(all_the_heroes):
             grand_list = turn_selector(grand_list)
         elif choice == "roll":
             dice_rolling()
-            display_initiative(grand_list, round_count)
+            display_initiative(grand_list, curr_round)
         elif choice == "guide":
             dice_guide()
         elif choice == "hp":
             change_health(grand_list)
         elif choice == "main":
             print("you are currently in the main menu")
-            display_initiative(grand_list, round_count)
+            display_initiative(grand_list, curr_round)
             continue
         elif choice == "default":
             default_changer.main()
@@ -482,6 +485,15 @@ def define_heroes():
     list_of_heroes1 = file.read()
     file.close()
     list_of_heroes1 = list(list_of_heroes1.split(", "))
+
+    heroes_to_remove = []
+    for hero in list_of_heroes1:
+        if hero[0] == "#":
+            heroes_to_remove.append(hero)
+
+    for person in heroes_to_remove:
+        list_of_heroes1.remove(person)
+
     return list_of_heroes1
 
 
