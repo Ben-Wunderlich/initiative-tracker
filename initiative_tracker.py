@@ -1,27 +1,28 @@
 import random
-from matrixing import string_sorter, main as full_query
+from dice_roller import string_sorter, main as full_query
 import player_name_changer as default_changer
-from num_ensure import formula_ensure, integer_ensure
+from inp_ensure import formula_ensure, integer_ensure
 
 
-# note this is modified so if given "main" it will return main
-# otherwise it will always return a number from the user
-
-
+# creates a file to house heroes
 def make_hero_file():
     file2 = open("hero names.txt", "w")
-    file2.write("hero1, hero2")
+    num_of_heroes = integer_ensure("how many heroes?")
+    for number in range(1, num_of_heroes+1):
+        file2.write("hero"+str(number))
     file2.close()
     print("file for names of heroes created")
 
 
 class Creature:
     def rename(self, grand_list):
+        old_name = self.name
         self.name = make_name_full("What is {}'s new name?".format(self.name), grand_list)
+        default_changer.auto_rename(old_name, self.name)
 
     def reorder(self):
         self.initiative = integer_ensure("what is {}'s new initiative? (currently {}) "
-                                         .format(self.name, self.initiative))
+                                         .format(self.name, self.initiative), min=1)
         print("\n{}'s initiative is now {}\n".format(self.name, self.initiative))
 
 
@@ -83,7 +84,7 @@ class Hero(Creature):
         if is_new:
             self.initiative = 42
         else:
-            self.initiative = integer_ensure("what is {}'s initiative?".format(self.name))
+            self.initiative = integer_ensure("what is {}'s initiative?".format(self.name), min=1)
 
     def __sub__(self, other):
         print("that is not a valid command for this character")
@@ -165,18 +166,18 @@ def new_creature(grand_list):
         else:
             print("that does not work")
 
-    i = 1
+    numeric_suffix = 1
     for _ in range(number_of_creatures):
         if is_good:
             grand_list.insert(0, Hero("", True, grand_list))
         elif hero_villain == "v":
             grand_list.insert(0, Enemy(grand_list[0].initiative + 1, grand_list))
         else:  # this is if hero_villain == "vg
-            current_name = base_name + str(i)
+            current_name = base_name + str(numeric_suffix)
             grand_list.insert(0, Enemy
     (grand_list[0].initiative + 1, grand_list, current_name, amount_of_health))
 
-            i += 1
+            numeric_suffix += 1
     display_initiative(grand_list)
 
 
@@ -196,19 +197,11 @@ def damage_creature(the_list, curr_round):
     see_enemies(the_list)
     print()
     who_damaged = index_input("which monster is being damaged? ", the_list, False)
-    if who_damaged == "main":
-        return "main"
-    while the_list[who_damaged].side == "hero":
+    if the_list[who_damaged].side == "hero":
         print("it is up to a player to track their own health, pick again")
-        who_damaged = index_input("which monster is being damaged? ", the_list, False)
-        if who_damaged == "main":
-            return "main"
 
-    if who_damaged == "main":
-        return "main"
     damage_amount = formula_ensure("how much damage is being inflicted to {}?"
                                    .format(the_list[who_damaged].name))
-    #damage_amount = int(damage_amount + 0.5) # rounds it
 
     is_dead = the_list[who_damaged] - damage_amount
     if is_dead:
@@ -234,7 +227,7 @@ def starting_part(grand_list, heroes):
         new_hero = Hero(hero, False, grand_list)
         grand_list.append(new_hero)
 
-    enemy_amount = integer_ensure("how many enemies?")
+    enemy_amount = integer_ensure("how many enemies?", min=0)
     if enemy_amount <= 0:
         print("Round: 1")
         bubble_sort(grand_list)
@@ -279,8 +272,6 @@ def cycle_initiative(grand_list):
 # changes name of any creature
 def change_name(grand_list):
     who_name_change = index_input("whose name needs to be corrected?", grand_list)
-    if who_name_change == "main":
-        return "main"
     grand_list[who_name_change].rename(grand_list)
     display_initiative(grand_list)
 
@@ -316,7 +307,6 @@ def see_commands():
      'guide' -- guide to using the dice rolling feature
       'main' -- go back to main menu/exit current process
         'hp' -- manually set a creatures health
-   'default' -- change default hero names
       'quit' -- exit out of the program
      'reset' -- resets the program
 """)
@@ -326,16 +316,7 @@ def see_commands():
 def index_input(question, grand_list, show_init=True):
     if show_init:
         display_initiative(grand_list)
-    answer = -1
-    # -1 is an arbitrary number
-    #  that will make the loop run at least once
-    while answer > len(grand_list) or answer < 1:
-        answer = input(question)
-        if answer == "main":
-            return "main"
-        else:
-            answer = integer_ensure(question, answer)
-    answer -= 1
+    answer = integer_ensure(question, min=1, max=len(grand_list))-1
     return answer
 
 
@@ -355,8 +336,8 @@ def use_reaction(grand_list):
 
 # jumps to anyone's turn manually
 def turn_selector(grand_list):
-    chosen_creature = index_input("which creatures turn do you want it to be?",
-                                  grand_list)
+    chosen_creature = index_input("which creatures"
+        " turn do you want it to be?", grand_list)
     chosen_name = grand_list[chosen_creature].name
     while grand_list[0].name != chosen_name:
         grand_list = cycle_initiative(grand_list)
@@ -381,7 +362,7 @@ def dice_guide():
 
 
 # rolls the dice
-def dice_rolling():
+def dice_rolling(dice=None):
     total_statement = "\nYour roll total is: "
     query = "select which dice you want to roll(1d4 form), 'main' to go back"
     die_roll = None
@@ -404,6 +385,29 @@ def change_health(grand_list):
     print("{} now has {} health".
           format(grand_list[which_enemy].name,
                  grand_list[which_enemy].health))
+
+
+def define_heroes():
+    try:
+        file = open("hero names.txt", "r")
+    except IOError as e:
+        print(e)
+        print("file: hero names.txt not found, creating file")
+        make_hero_file()
+        file = open("hero names.txt", "r")
+    list_of_heroes1 = file.read()
+    file.close()
+    list_of_heroes1 = list(list_of_heroes1.split(", "))
+
+    heroes_to_remove = []
+    for hero in list_of_heroes1:
+        if hero[0] == "#":
+            heroes_to_remove.append(hero)
+
+    for person in heroes_to_remove:
+        list_of_heroes1.remove(person)
+
+    return list_of_heroes1
 
 
 def main(all_the_heroes):
@@ -457,8 +461,8 @@ def main(all_the_heroes):
             use_reaction(grand_list)
         elif choice == "turn":
             grand_list = turn_selector(grand_list)
-        elif choice == "roll":
-            dice_rolling()
+        elif "roll" in choice:
+            dice_rolling(choice[5:])
             display_initiative(grand_list, curr_round)
         elif choice == "guide":
             dice_guide()
@@ -468,33 +472,8 @@ def main(all_the_heroes):
             print("you are currently in the main menu")
             display_initiative(grand_list, curr_round)
             continue
-        elif choice == "default":
-            default_changer.main()
         else:
-            print("that command is not familiar to me, try again")
-
-
-def define_heroes():
-    try:
-        file = open("hero names.txt", "r")
-    except IOError as e:
-        print(e)
-        print("file: hero names.txt not found, creating file")
-        make_hero_file()
-        file = open("hero names.txt", "r")
-    list_of_heroes1 = file.read()
-    file.close()
-    list_of_heroes1 = list(list_of_heroes1.split(", "))
-
-    heroes_to_remove = []
-    for hero in list_of_heroes1:
-        if hero[0] == "#":
-            heroes_to_remove.append(hero)
-
-    for person in heroes_to_remove:
-        list_of_heroes1.remove(person)
-
-    return list_of_heroes1
+            print("that command is not familiar to me, enter 'help' to see options\n")
 
 
 list_of_heroes = define_heroes()
